@@ -1,25 +1,15 @@
-import { useState } from 'react'
-import './App.css'
-import Select from "./component/Select";
-import LandingPage from './landingPage/landingPage';
-
-
-
+import "./App.css";
+import LandingPage from "./LandingPage/LandingPage";
 
 function App() {
-
-
   return (
     <>
-    
       <h1>JANUARY ASSIGNMENT ON HOOKS</h1>
       <div className="App">
-      <LandingPage/>
-      <Select/>
-      
+        <LandingPage />
       </div>
     </>
-  )
+  );
 }
 
 export default App;

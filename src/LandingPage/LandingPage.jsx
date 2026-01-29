@@ -1,201 +1,110 @@
+import React from 'react'
+import genreData from '../Store/Genre.json'
+import moodData from '../Store/Mood.json'
+import SelectField from '../component/Select'
+import './LandingPage.css'
 
-import React, { useReducer, useEffect, useCallback } from "react";
-
-/* ---------------- INITIAL STATE ---------------- */
-const initialState = {
-  genre: "",
-  mood: "",
-  level: "",
-  responses: [],
-  loading: false,
-  error: null,
-};
-
-/* ---------------- REDUCER ---------------- */
-function reducer(state, action) {
-  switch (action.type) {
-    case "SET_FIELD":
-      return { ...state, [action.field]: action.value };
-
-    case "START_FETCH":
-      return { ...state, loading: true, error: null };
-
-    case "FETCH_SUCCESS":
-      return {
-        ...state,
-        loading: false,
-        responses: [...state.responses, action.payload],
-      };
-
-    case "FETCH_ERROR":
-      return { ...state, loading: false, error: action.payload };
-
-    default:
-      return state;
-  }
-}
-
-/* ---------------- COMPONENT ---------------- */
 export default function LandingPage() {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const { genre, mood, level, responses, loading, error } = state;
+  const [genre, setGenre] = React.useState('')
+  const [mood, setMood] = React.useState('')
+  const [level, setLevel] = React.useState('')
+  const [aiResponses, setAiResponses] = React.useState([])
 
-  /* ---------------- DATA ---------------- */
-  const listOfMoodOption = {
-    Fiction: ["Happy", "Sad", "Adventurous"],
-    NonFiction: ["Curious", "Motivated"],
-  };
+  const listOfGenreOption = genreData
+  const listOfMoodOption = moodData
+  const availableMoodBasedOnGenre = listOfMoodOption[genre]
 
-  const availableMoodBasedOnGenre = listOfMoodOption[genre] || [];
+  const getRecommendation = async () => {
+    setAiResponses([
+      ...aiResponses,
+      `Genre: ${genre}, Mood: ${mood}, and level: ${level}`
+    ])
+  }
 
-  /* ---------------- CALLBACK ---------------- */
-  const fetchRecommendations = useCallback(async () => {
+  const fetchRecommendations = async () => {
     if (!genre || !mood || !level) return;
 
-    dispatch({ type: "START_FETCH" });
-
     try {
-      const GEMINI_API_KEY = "YOUR_API_KEY_HERE";
-
+      const GEMINI_API_KEY = 'AIzaSyAaitFnIuiRbEjr7EcmMq9Ieg5LQJzAs2I'
       const response = await fetch(
         "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" +
-          GEMINI_API_KEY,
+        GEMINI_API_KEY,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `Recommend 6 books for a ${level} ${genre} reader feeling ${mood}. Explain why.`,
-                  },
-                ],
-              },
-            ],
-          }),
+            contents: [{ parts: [{ text: `Recommend 6 books for a ${level} ${genre} reader feeling ${mood}. Explain why.` }] }]
+          })
         }
       );
-
       const data = await response.json();
-
-      dispatch({
-        type: "FETCH_SUCCESS",
-        payload: data.candidates?.[0]?.content?.parts?.[0]?.text || "No response",
-      });
+      console.log(response?.data)
+      setAiResponses([...aiResponses, ...response?.data?.candidates])
     } catch (err) {
-      dispatch({ type: "FETCH_ERROR", payload: err.message });
+      console.log(err)
     }
-  }, [genre, mood, level]);
+  }
 
-  /* ---------------- EFFECT ---------------- */
-  useEffect(() => {
-    if (genre) {
-      dispatch({ type: "SET_FIELD", field: "mood", value: "" });
-    }
-  }, [genre]);
-
-  /* ---------------- UI ---------------- */
   return (
-    <div>
-      <h1>Book Recommendation App</h1>
+    <section>
+      <h2>Available Genres</h2>
+      <ul>
+        {listOfGenreOption.map((g, i) => <li key={i}>{g}</li>)}
+      </ul>
 
-      <button onClick={fetchRecommendations} disabled={loading}>
-        {loading ? "Loading..." : "Get AI Recommendation"}
+      <h2>Available Moods by Genre</h2>
+      {Object.entries(listOfMoodOption).map(([genreKey, moods], i) => (
+        <div key={i}>
+          <h3>{genreKey}</h3>
+          <ul>
+            {moods.map((mood, j) => <li key={j}>{mood}</li>)}
+          </ul>
+        </div>
+      ))}
+
+      <hr />
+      <h2>Get Your Book Recommendation</h2>
+
+      <SelectField
+        placeholder="Please select a genre"
+        id="genre"
+        options={listOfGenreOption}
+        onSelect={setGenre}
+        value={genre}
+      />
+
+      <SelectField
+        placeholder="Please select a mood"
+        id="mood"
+        options={availableMoodBasedOnGenre || []}
+        onSelect={setMood}
+        value={mood}
+      />
+
+      <SelectField
+        placeholder="Please select a level"
+        id="level"
+        options={['Beginner', "Intermediate", "Expert"]}
+        onSelect={setLevel}
+      />
+
+      <button className="recommendation-button" onClick={fetchRecommendations}>
+        Get Recommendation
       </button>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <br />
+      <br />
 
-      {responses.map((res, index) => (
-        <p key={index}>{res}</p>
-      ))}
-    </div>
-  );
+      {
+        aiResponses.map((recommend, index) => {
+          return (
+            <details key={index} name="recommendation">
+              <summary>Recommendation {index + 1}</summary>
+              <p>{recommend?.content?.[0]?.text}</p>
+            </details>
+          )
+        })
+      }
+    </section>
+  )
 }
-
-
-
-
-// import React from "react";
-
-
-
-
-// export default function LandingPage() {
-//   const [state, dispatch] = useReducer(reducer, initialState);
-//   const { genre, mood, level, responses, loading, error } = state;
-
-//   const listOfMoodOption = {
-//     Fiction: ["Happy", "Sad", "Adventurous"],
-//     NonFiction: ["Curious", "Motivated"],
-//   };
-//   const availableMoodBasedOnGenre = listOfMoodOption[genre] || [];
-
-
-// export default function LandingPage() {
-//   const [genre, setGenre] = React.useState("");
-//   const [mood, setMood] = React.useState("");
-//   const [level, setLevel] = React.useState("");
-//   const [aiResponses, setAiResponses] = React.useState([]);
-
-//   // example moods list (make sure this exists)
-//   const listOfMoodOption = {
-//     Fiction: ["Happy", "Sad", "Adventurous"],
-//     NonFiction: ["Curious", "Motivated"],
-//   };
-
-//   const availableMoodBasedOnGenre = listOfMoodOption[genre] || [];
-
-//   const getRecommendation = () => {
-//     setAiResponses((prev) => [
-//       ...prev,
-//       `Genre: ${genre}, Mood: ${mood}, and Level: ${level}`,
-//     ]);
-//   };
-
-//   const fetchRecommendations = async () => {
-//     if (!genre || !mood || !level) return;
-
-//     try {
-//       const GEMINI_API_KEY = "AIzaSyAaitFnIuiRbEjr7EcmMq9Ieg5LQJzAs2I";
-
-//       const response = await fetch(
-//         "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=" +
-//           GEMINI_API_KEY,
-//         {
-//           method: "POST",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify({
-//             contents: [
-//               {
-//                 parts: [
-//                   {
-//                     text: `Recommend 6 books for a ${level} ${genre} reader feeling ${mood}. Explain why.`,
-//                   },
-//                 ],
-//               },
-//             ],
-//           }),
-//         },
-//       );
-
-//       const data = await response.json();
-//       console.log(data);
-//     } catch (error) {
-//       console.error("Error fetching recommendations:", error);
-//     }
-//   };
-
-//   return (
-//     <div>
-//       <h1>Book Recommendation App</h1>
-
-//       <button onClick={getRecommendation}>Save Selection</button>
-//       <button onClick={fetchRecommendations}>Get AI Recommendation</button>
-
-//       {aiResponses.map((res, index) => (
-//         <p key={index}>{res}</p>
-//       ))}
-//     </div>
-//   );
-// }
